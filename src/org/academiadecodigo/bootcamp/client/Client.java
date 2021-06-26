@@ -7,10 +7,12 @@ import java.util.Scanner;
 public class Client implements Runnable{
 
     private Socket socket;
+    String mensagem;
+    Thread thread;
 
     public Client(Integer port){
         clientConnect(port);
-        Thread thread = new Thread(this);
+        thread = new Thread(this);
         thread.start();
         send();
     }
@@ -26,28 +28,46 @@ public class Client implements Runnable{
 
     public void send(){
         Scanner scanner = new Scanner(System.in);
-        String mensagem = scanner.nextLine();
+        mensagem = scanner.nextLine();
         PrintWriter printWriter;
         try {
             printWriter = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
-            while (true) {
+            while (!socket.isClosed()) {
                 printWriter.println(mensagem);
                 mensagem = scanner.nextLine();
-                if(mensagem.equals("/quit")){
-                    System.exit(1);
+                if(mensagem.equals("/quit") || mensagem == null){
+                    printWriter.println(mensagem);
+                    close();
+                    return;
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
     }
 
     public void read(BufferedReader bufferedReader){
         try {
-            System.out.println(bufferedReader.readLine());
+            String mensagem = bufferedReader.readLine();
+            if (mensagem == null){
+                close();
+                System.exit(1);
+                return;
+            }
+            System.out.println(mensagem);
+        } catch (IOException e) {
+            //e.printStackTrace();
+        }
+    }
+
+    public void close(){
+        try {
+            socket.close();
+            thread.interrupt();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
 
@@ -59,7 +79,7 @@ public class Client implements Runnable{
         } catch (IOException e) {
             e.printStackTrace();
         }
-        while (true) {
+        while (!socket.isClosed()) {
             read(bufferedReader);
         }
     }
